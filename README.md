@@ -1,7 +1,7 @@
 # Sakura bot
 # さくらボット
 
-## 研发阶段<hr> 
+## 研发阶段 
 - 开发语言：Python
 - 开发工具：PyCharm
 - 开发环境：Windows 11
