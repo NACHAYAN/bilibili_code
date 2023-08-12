@@ -294,12 +294,12 @@ if __name__ == '__main__':
                        downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/")
         download_image(_url=img_href, downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/",
                        file_name="poster.jpg")
-        with open(f"{config.downloads_path}/{author_value}/{title_text}/info.nfo", "w", encoding="utf-8") as info:
+        with open(f"{config.downloads_path}/{author_value}/{title_text}/movie.nfo", "w", encoding="utf-8") as info:
             info.write(content)
-            log.info(f"将视频信息写入{config.downloads_path}/{author_value}/{title_text}/info.nfo中~~~")
-            print(f"将视频信息写入{config.downloads_path}/{author_value}/{title_text}/info.nfo中~~~")
-        log.info(f"下载结束，请在{config.downloads_path}/{author_value}/{title_text}下查看项目结果（＾▽＾）")
-        print(f"下载结束，请在{config.downloads_path}/{author_value}/{title_text}下查看项目结果（＾▽＾）")
+            log.info(f"将视频信息写入'{config.downloads_path}/{author_value}/{title_text}/movie.nfo'中~~~")
+            print(f"将视频信息写入'{config.downloads_path}/{author_value}/{title_text}/movie.nfo'中~~~")
+        log.info(f"下载结束，请在'{config.downloads_path}/{author_value}/{title_text}/'下查看项目结果（＾▽＾）")
+        print(f"下载结束，请在'{config.downloads_path}/{author_value}/{title_text}'下查看项目结果（＾▽＾）")
     except Exception as _E:
         log.error(f"发生异常请处理：{_E}")
         print(f"发生异常，程序自动退出！")
