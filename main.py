@@ -292,7 +292,7 @@ if __name__ == '__main__':
         make_dir(f"{config.downloads_path}/{author_value}/{title_text}/")
         download_video(_url=url, COOKIE_PATH=config.bilibili_cookies,
                        downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/")
-        download_image(_url=url, downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/",
+        download_image(_url=img_href, downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/",
                        file_name="poster.jpg")
         with open(f"{config.downloads_path}/{author_value}/{title_text}/info.nfo", "w", encoding="utf-8") as info:
             info.write(content)
