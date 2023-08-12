@@ -143,6 +143,20 @@ def check_and_install_you_get():
             sys.exit(0)
 
 
+def make_dir(path):
+    """创建文件夹"""
+    try:
+        path = path.strip().rstrip('\\')
+        if not os.path.exists(path):
+            os.makedirs(path)
+            return True
+        else:
+            return False
+    except Exception as e:
+        log.info(f"创建文件夹{path}失败：{e}")
+        return False
+
+
 # 如果系统支持，则执行检查和安装 you-get 的操作
 if system_name == 'Windows' or system_name == 'Linux':
     try:
@@ -275,6 +289,7 @@ if __name__ == '__main__':
                f"</episodedetails>\n")
 
     try:
+        make_dir(f"{config.downloads_path}/{author_value}/{title_text}/")
         download_video(_url=url, COOKIE_PATH=config.bilibili_cookies,
                        downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/")
         download_image(_url=url, downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/",
