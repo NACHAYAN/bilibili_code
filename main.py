@@ -1,4 +1,5 @@
 # Author: NACHAYAN
+import json
 import logging
 import os
 import platform
@@ -157,6 +158,12 @@ def make_dir(path):
         return False
 
 
+def sanitize_filename(filename):
+    # 这个函数用来去除文件名中的特殊字符
+    return re.sub(r'[\\/:*?"<>|]', '_', filename)
+
+
+# TODO 增加对于清晰度的检查
 # 如果系统支持，则执行检查和安装 you-get 的操作
 if system_name == 'Windows' or system_name == 'Linux':
     try:
@@ -171,10 +178,11 @@ else:
     sys.exit(0)
 
 if __name__ == '__main__':
-    log.info(f"✨✨✨开始启动下载器，请等待片刻✨✨✨")
-    print(f"✨✨✨开始启动下载器，请等待片刻✨✨✨")
-    url = input("请输入视频链接地址：")
-    log.info(f"\n输入链接：{url}")
+    log.info(f"\n✨✨✨开始启动下载器，请等待片刻✨✨✨")
+    print(f"\n✨✨✨开始启动下载器，请等待片刻✨✨✨")
+    time.sleep(5)
+    url = input("请输入视频链接地址：")  # TODO 将用户输入链接转为自定义构造链接，防止出现特殊的get类型的data导致下载异常。
+    log.info(f"输入链接：{url}")
     header = {
         "authority": "data.bilibili.com",
         "accept": "*/*",
@@ -193,76 +201,67 @@ if __name__ == '__main__':
                       "Safari/537.36"
     }
 
+    # 开始数据处理
+    state_json = {}
     try:
         res = requests.get(url=url, headers=header)
+        # 对于视频数据进行预处理，减轻后续工作量
+        data_pattern = r'window\.?__INITIAL_STATE__\s?=\s?({.*?});'
+        match = re.search(data_pattern, res.text)
+        if match:
+            state_json = json.loads(match.group(1))
+            log.info(f"数据预处理完成！")
+        else:
+            log.info(f"数据处理失败")
+            print("数据处理失败")
     except Exception as e:
         log.error(f"发生异常：{e}")
         print(f"发生异常：{e}")
         sys.exit(0)
 
     # 处理视频ID
-    ID_found = False
-    ID_pattern = (r'<link data-vue-meta="true" rel="alternate" media="only screen and\(max-width: 640px\)" href="(['
-                  r'^"]+)">')
-    ID_match = re.search(ID_pattern, res.text)
-
-    if ID_match:
-        ID_found = True
-        href_content = ID_match.group(1)
-        video_id = re.search(r'video/([A-Za-z0-9]+)', href_content).group(1)
+    try:
+        video_id = state_json["bvid"]
         log.info(f"1.视频Bvid号：{video_id}")
         print(f"1.视频Bvid号：{video_id}")
-    else:
+    except Exception as e:
+        log.error(f"1.未找到视频Bvid号，错误信息：{e}")
         print("1.未找到视频Bvid号")
 
     # 作者信息处理
-    author_pattern = r'<meta data-vue-meta="true" itemprop="author" name="author" content="([^"]+)">'
-    author_match = re.search(author_pattern, res.text)
-
-    if author_match:
-        author_value = author_match.group(1)
+    try:
+        author_value = state_json["videoData"]["owner"]["name"]
         log.info(f"2.视频作者：{author_value}")
         print(f"2.视频作者：{author_value}")
-    else:
+    except Exception as e:
+        log.error(f"2.未找到视频作者信息，错误信息：{e}")
         print("2.未找到视频作者信息")
 
     # 标题处理部分
-    title_found = False
-    title_pattern = r'<title data-vue-meta="true">([^<]+)</title>'
-    title_match = re.search(title_pattern, res.text)
-
-    if title_match:
-        title_found = True
-        title_text = re.sub(r'_哔哩哔哩_bilibili', '', title_match.group(1))
+    try:
+        title_text = state_json["videoData"]["title"]  # FIXME ✔已修复 标题进行预处理，防止出现特殊命名符号导致下载错误或是文件夹打包失败！
         log.info(f"3.视频标题：{title_text}")
         print(f"3.视频标题：{title_text}")
-    else:
+    except Exception as e:
+        log.error(f"3.未找到视频标题信息，错误信息：{e}")
         print("3.未找到视频标题信息")
 
     # 图片处理部分
-    img_found = False
-    img_pattern = r'<link data-vue-meta="true" rel="apple-touch-icon" href="([^"]+)'
-    img_match = re.search(img_pattern, res.text)
-
-    if img_match:
-        img_found = True
-        href_content = img_match.group(1)
-        img_href = "https:{}".format(re.sub(r'@.*$', '', href_content))
+    try:
+        img_href = state_json["videoData"]["pic"]
         log.info(f"4.视频封面链接为：{img_href}")
         print(f"4.视频封面链接为：{img_href}")
-    else:
+    except Exception as e:
+        log.error(f"4.未找到封面链接地址，错误信息：{e}")
         print("4.未找到封面链接地址")
 
     # 简介处理部分（标记处：移除了多余的 .strip() 操作）
-    plot_found = False
-    plot_pattern = r'<span class="desc-info-text" data-v-1d530b8d.*?>(.*?)</span></div>'
-    plot_match = re.search(plot_pattern, res.text, re.DOTALL)
-
-    if plot_match:
-        plot_text = plot_match.group(1)  # 移除了多余的 .strip() 操作
+    try:
+        plot_text = state_json["videoData"]["desc"]
         log.info(f"5.视频简介为：{plot_text}")
         print(f"5.视频简介为：{plot_text}")
-    else:
+    except Exception as e:
+        log.error(f"5.未找到视频简介，错误信息：{e}")
         print("5.未找到视频简介")
 
     # 发布时间处理
@@ -276,30 +275,44 @@ if __name__ == '__main__':
         log.info(f"6.发布时间为：{time_value}")
         print(f"6.发布时间为：{time_value}")
     else:
+        log.error("6.未找到视频发布时间")
         print("6.未找到视频发布时间")
 
-    content = (f"\n"
-               f"<?xml version=\"1.0\" ?>\n"
+    content = (f"<?xml version=\"1.0\" ?>\n"  # 修复首行换行导致Jellyfin无法正确识别到nfo文件
                f"<episodedetails>\n"
                f"    <title>{title_text}</title>\n"
                f"    <showtitle>{author_value}</showtitle>\n"
                f"    <uniqueid type=\"bilibili\" default=\"true\">{video_id}</uniqueid>\n"
                f"    <plot>{plot_text}</plot>\n"
-               f"    <premiered>{time_value}</premiered>\n"
+               f"    <outline>{plot_text}</outline>\n"  # 修复Jellyfin无法识别视频简介的错误nfo部分
+               f"    <premiered>{time_value[:10]}</premiered>\n"  # 修复视频时间无法被Jellyfin识别的Bug
+               f"    <genre>{state_json['videoData']['tname']}</genre>\n"  # 新增视频风格部分解析
+               f"    <actor>\n"  # 新增UP主信息展示
+               f"        <name>{author_value}</name>\n"
+               f"        <role>{author_value}</role>\n"
+               f"        <thumb>{state_json['videoData']['owner']['face']}</thumb>\n"
+               f"        <profile>https://space.bilibili.com/{state_json['videoData']['owner']['mid']}</profile>\n"
+               f"    </actor>\n"
                f"</episodedetails>\n")
 
     try:
-        make_dir(f"{config.downloads_path}/{author_value}/{title_text}/")
-        download_video(_url=url, COOKIE_PATH=config.bilibili_cookies,
-                       downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/")
-        download_image(_url=img_href, downloads_path=f"{config.downloads_path}/{author_value}/{title_text}/",
+        make_dir(f"{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/")
+        download_video(_url=f"https://www.bilibili.com/video/{state_json['bvid']}", COOKIE_PATH=config.bilibili_cookies,
+                       downloads_path=f"{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/")
+        download_image(_url=img_href,
+                       downloads_path=f"{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/",
                        file_name="poster.jpg")
-        with open(f"{config.downloads_path}/{author_value}/{title_text}/movie.nfo", "w", encoding="utf-8") as info:
+        with open(f"{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/movie.nfo", "w",
+                  encoding="utf-8") as info:
             info.write(content)
-            log.info(f"将视频信息写入'{config.downloads_path}/{author_value}/{title_text}/movie.nfo'中~~~")
-            print(f"将视频信息写入'{config.downloads_path}/{author_value}/{title_text}/movie.nfo'中~~~")
-        log.info(f"下载结束，请在'{config.downloads_path}/{author_value}/{title_text}/'下查看项目结果（＾▽＾）")
-        print(f"下载结束，请在'{config.downloads_path}/{author_value}/{title_text}'下查看项目结果（＾▽＾）")
+            log.info(
+                f"将视频信息写入：'{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/movie.nfo'中~~~")
+            print(
+                f"将视频信息写入：'{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/movie.nfo'中~~~")
+        log.info(
+            f"下载结束，请在：'{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}/'下查看项目结果（＾▽＾）")
+        print(
+            f"下载结束，请在：'{config.downloads_path}/{author_value}/{sanitize_filename(title_text)}'下查看项目结果（＾▽＾）")
     except Exception as _E:
         log.error(f"发生异常请处理：{_E}")
         print(f"发生异常，程序自动退出！")
